@@ -1,0 +1,20 @@
+{
+  "test_run_information": {
+    "test_run_id": "6fd60196c08b3089df9a3fd714042a37a410371dd4045c5b037b0b935ac1d9d1",
+    "start_time": "2025-05-21 14:58:46 UTC",
+    "end_time": "2025-05-21 14:59:46 UTC",
+    "baseline": "1fbb76b6bf1347ce1bf58c85529ca1998372de8d97901ecd5876041b06761fed",
+    "environment": "c8d358099b30500dad79029f5294741bd8881b184af66ffbc7c6e1d38867e81f"
+  },
+  "participant_verifications": {
+    "uss1": {
+      "status": "Incomplete",
+      "system_version": "Brendan-Hillis/monitoring/v0.0.0-6a92d38"
+    },
+    "uss2": {
+      "status": "Pass",
+      "system_version": "Brendan-Hillis/monitoring/v0.0.0-6a92d38"
+    }
+  },
+  "artifact_configuration": "gate3"
+}
