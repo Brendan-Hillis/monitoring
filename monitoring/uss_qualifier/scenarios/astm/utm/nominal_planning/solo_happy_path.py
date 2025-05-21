@@ -22,8 +22,12 @@ from monitoring.uss_qualifier.resources.flight_planning.flight_intent_validation
 from monitoring.uss_qualifier.resources.flight_planning.flight_planners import (
     FlightPlannerResource,
 )
+from monitoring.uss_qualifier.scenarios.astm.utm.test_steps import OpIntentValidator
 from monitoring.uss_qualifier.scenarios.flight_planning.test_steps import (
     cleanup_flights,
+    plan_flight,
+    activate_flight,
+    delete_flight,
 )
 from monitoring.uss_qualifier.scenarios.scenario import TestScenario
 from monitoring.uss_qualifier.suites.suite import ExecutionContext
@@ -91,7 +95,62 @@ class SoloHappyPath(TestScenario):
 
         self.begin_test_scenario(context)
 
-        # TODO(#751): Implement scenario
+        self.begin_test_step("Plan flight 1")
+        self.flight1_id, _ = plan_flight(
+            scenario=self,
+            flight_planner=self.tested_uss,
+            flight_info=self.flight1_planned,
+        )
+        self.end_test_step()
+
+        self.begin_test_step("Validate flight 1 sharing (planned)")
+        with OpIntentValidator(
+            scenario=self,
+            flight_planner=self.tested_uss,
+            dss=self.dss,
+            extent=self.flight1_planned,
+        ) as validator:
+            oi_ref_planned = validator.expect_shared(self.flight1_planned)
+        self.end_test_step()
+
+        self.begin_test_step("Activate flight 1")
+        _, _ = activate_flight(
+            scenario=self,
+            flight_planner=self.tested_uss,
+            flight_info=self.flight1_activated,
+            flight_id=self.flight1_id,
+        )
+        self.end_test_step()
+
+        self.begin_test_step("Validate flight 1 sharing (activated)")
+        with OpIntentValidator(
+            scenario=self,
+            flight_planner=self.tested_uss,
+            dss=self.dss,
+            extent=self.flight1_activated,
+            orig_oi_ref=oi_ref_planned,
+        ) as validator:
+            oi_ref_activated = validator.expect_shared(self.flight1_activated)
+        self.end_test_step()
+
+        self.begin_test_step("Delete flight 1")
+        delete_flight(
+            scenario=self,
+            flight_planner=self.tested_uss,
+            flight_id=self.flight1_id,
+        )
+        self.end_test_step()
+
+        self.begin_test_step("Validate flight 1 removal")
+        with OpIntentValidator(
+            scenario=self,
+            flight_planner=self.tested_uss,
+            dss=self.dss,
+            extent=self.flight1_activated,
+            orig_oi_ref=oi_ref_activated,
+        ) as validator:
+            validator.expect_removed(oi_ref_activated.id)
+        self.end_test_step()
 
         self.end_test_scenario()
 
