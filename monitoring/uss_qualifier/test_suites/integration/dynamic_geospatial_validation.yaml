@@ -1,0 +1,61 @@
+resources:
+  uss1_base_url:
+    resource_type: USSBaseURL
+    specification:
+      uss_base_url: http://mock-uss.interuss.com # Does not need to exist for this test's focus
+
+  uss1_auth_adapter:
+    resource_type: AuthAdapter
+    specification:
+      auth_spec: "" # No auth
+
+  # Removed dynamic_geospatial_provider (type GeospatialInfoProvider) as dynamic capabilities were removed from it.
+  # Replaced by external_dynamic_source below.
+
+  external_dynamic_source:
+    resource_type: ExternalGeoSourceResource
+    # schemas_version: v1 # Optional if there's a default or not strictly versioned yet in this way
+    specification:
+      external_geo_source:
+        source_url: "https://raw.githubusercontent.com/interuss/monitoring/main/monitoring/uss_qualifier/test_data/sample_dynamic_restrictions.geojson"
+        participant_id: "external-geojson-feed"
+        source_type: "geojson" # Explicitly stating, though it's default in config
+
+  uss1_flight_planner:
+    resource_type: FlightPlanner
+    specification:
+      target:
+        name: USS Under Test
+        participant_id: "mock-uss"
+        injection_base_url: http://mock-uss.interuss.com/f3548v21 # Matches uss1_base_url for consistency
+      auth_adapter: uss1_auth_adapter
+
+scenarios:
+  - scenario_type: custom_test_suite.CustomTestSuite
+    name: Dynamic Geospatial Data Validation
+    actions:
+      - test_run_type: ActionGenerator
+        name: Validate Dynamic Geospatial Data against Mock USS
+        specification:
+          action_type: interuss.geospatial_map.DynamicGeospatialMapValidator
+          action_config:
+            # The key here 'external_geo_source' must match the field name in DynamicGeospatialMapValidatorConfig
+            external_geo_source: external_dynamic_source
+            flight_planner: uss1_flight_planner
+            injection_target: # Corresponds to FlightPlanner's target
+              name: USS Under Test
+              participant_id: "mock-uss"
+              injection_base_url: http://mock-uss.interuss.com/f3548v21
+            flight_altitude_m: 70
+            flight_duration_s: 45
+            flight_extent_buffer_m: 25
+            wait_for_operational_intent: false # False, as mock USS won't confirm, and we focus on planning attempts
+        resources:
+          # The key here 'external_geo_source' is how the action generator looks up the resource.
+          external_geo_source: external_dynamic_source
+          flight_planner: uss1_flight_planner
+          # Implicitly uses uss_base_url and auth_adapter from flight_planner's dependencies if needed by action's setup.
+          # The DynamicGeospatialMapValidationAction sets up its UTMClientSession for the injection_target.
+          # No separate base_url/auth_adapter resources needed directly by the action generator's `resources` map here.
+          # This might need adjustment based on how the test runner resolves transitive dependencies for action setup.
+          # For now, assuming FlightPlannerResource and GeospatialInfoProviderResource are sufficient.

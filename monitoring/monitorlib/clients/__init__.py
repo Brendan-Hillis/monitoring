@@ -20,3 +20,7 @@ query_hooks: List[QueryHook] = []
 def call_query_hooks(query: Query) -> None:
     for hook in query_hooks:
         hook.on_query(query=query)
+
+
+# Make the external_data submodule available
+from . import external_data

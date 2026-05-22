@@ -35,6 +35,10 @@ class GeospatialInfoProviderConfiguration(ImplicitDict):
                 raise ValueError(
                     "GeospatialInfoProviderConfiguration.geospatial_map_v1_base_url must be a URL"
                 )
+        # else:
+            # Implicitly, if geospatial_map_v1_base_url is not provided or is None/empty,
+            # this configuration might be considered invalid for creating a client,
+            # which will be handled in to_client.
 
     def to_client(self, auth_adapter: AuthAdapter) -> GeospatialInfoClient:
         if "geospatial_map_v1_base_url" in self and self.geospatial_map_v1_base_url:
@@ -42,8 +46,9 @@ class GeospatialInfoProviderConfiguration(ImplicitDict):
                 self.geospatial_map_v1_base_url, auth_adapter, self.timeout_seconds
             )
             return GeospatialMapClient(session, self.participant_id)
+
         raise ValueError(
-            "Could not construct GeospatialInfoClient from provided configuration"
+            "Could not construct GeospatialInfoClient from provided configuration: geospatial_map_v1_base_url was not specified or is invalid."
         )
 
 
@@ -64,20 +69,22 @@ class GeospatialInfoProviderResource(Resource[GeospatialInfoProviderSpecificatio
         super(GeospatialInfoProviderResource, self).__init__(
             specification, resource_origin
         )
-        if (
+
+        if not (
             "geospatial_map_v1_base_url" in specification.geospatial_info_provider
             and specification.geospatial_info_provider.geospatial_map_v1_base_url
         ):
-            auth_adapter.assert_scopes_available(
-                scopes_required={
-                    ScopeGeospatialMap.Query: "query geospatial map features from USSs under test",
-                },
-                consumer_name=f"{self.__class__.__name__} using geospatial_map v1 API",
+            raise ValueError(
+                "GeospatialInfoProviderResource requires 'geospatial_map_v1_base_url' to be specified in the configuration."
             )
-        else:
-            raise NotImplementedError(
-                "The means by which to interact with the geospatial information provider is not currently supported in GeospatialInfoProviderResource (geospatial_map_v1_base_url was not specified)"
-            )
+
+        # Assert scopes for the static geospatial map API
+        auth_adapter.assert_scopes_available(
+            scopes_required={
+                ScopeGeospatialMap.Query: "query geospatial map features from USSs under test",
+            },
+            consumer_name=f"{self.__class__.__name__} using geospatial_map v1 API",
+        )
 
         self.client = specification.geospatial_info_provider.to_client(
             auth_adapter.adapter
